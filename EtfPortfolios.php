@@ -93,7 +93,11 @@ class EtfPortfolios extends BasePackage
             }
         }
 
-        if ($portfolio) {
+        if (isset($portfolio)) {
+            if ($portfolio['account_id'] != $this->access->auth->account()['id']) {
+                return false;
+            }
+
             if ($portfolio['allocation'] && count($portfolio['allocation']) > 0) {
                 if (!$getAllocation) {
                     unset($portfolio['allocation']);
@@ -1152,5 +1156,30 @@ class EtfPortfolios extends BasePackage
         }
 
         $this->addResponse('No data found', 1);
+    }
+
+    public function getPortfoliosByAccountId()
+    {
+        if ($this->config->databasetype === 'db') {
+            $portfolios =
+                $this->getByParams(
+                    [
+                        'conditions'    => 'account_id = :sAccountId:',
+                        'bind'          => [
+                            'sAccountId'     => $this->access->auth->account()['id']
+                        ]
+                    ]
+                );
+        } else {
+            $this->ffStore = null;
+
+            $portfolios = $this->getByParams(['conditions' => ['account_id', '=', $this->access->auth->account()['id']]]);
+        }
+
+        if ($portfolios) {
+            return $portfolios;
+        }
+
+        return false;
     }
 }
