@@ -768,7 +768,10 @@ class EtfPortfolios extends BasePackage
             $this->portfolio['allocation']['by_schemes'] = [];
             $this->portfolio['allocation']['by_categories'] = [];
             $this->portfolio['allocation']['by_subcategories'] = [];
+
             foreach ($this->investments as $schemeId => &$investment) {
+                $portfolioInvestment = null;
+
                 if (isset($this->portfolio['investments'][$schemeId])) {
                     $portfolioInvestment = $this->portfolio['investments'][$schemeId];
 
@@ -839,7 +842,7 @@ class EtfPortfolios extends BasePackage
                         $investment['id'] = $this->investmentsPackage->packagesData->last['id'];
                     }
                 } else {
-                    $this->portfolio['sold_amount'] += $investment['sold_amount'];
+                    $this->portfolio['sold_amount'] += $investment['sold_amount'] ?? 0;
                     $this->portfolio['invested_amount'] += $investment['total_investment'];
                     $this->portfolio['return_amount'] += $portfolioInvestment['latest_value'];
                 }
@@ -979,8 +982,7 @@ class EtfPortfolios extends BasePackage
 
         $this->portfolio['total_value'] = $this->portfolio['return_amount'] + $this->portfolio['sold_amount'];
 
-        $this->portfolio['profit_loss'] =
-            numberFormatPrecision(($this->portfolio['return_amount'] + $this->portfolio['sold_amount']) - $this->portfolio['invested_amount'], 2);
+        $this->portfolio['profit_loss'] = numberFormatPrecision($this->portfolio['return_amount'] - $this->portfolio['invested_amount'], 2);
 
         if ($this->portfolio['profit_loss'] > 0) {
             $this->portfolio['status'] = 'positive';
