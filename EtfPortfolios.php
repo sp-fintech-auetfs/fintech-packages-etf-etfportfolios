@@ -2,6 +2,7 @@
 
 namespace Apps\Fintech\Packages\Etf\Portfolios;
 
+use Apps\Fintech\Packages\Etf\Amcs\EtfAmcs;
 use Apps\Fintech\Packages\Etf\Categories\EtfCategories;
 use Apps\Fintech\Packages\Etf\Investments\EtfInvestments;
 use Apps\Fintech\Packages\Etf\Portfolios\Model\AppsFintechEtfPortfolios;
@@ -34,9 +35,13 @@ class EtfPortfolios extends BasePackage
 
     protected $schemesPackage;
 
+    protected $amcsPackage;
+
     protected $scheme;
 
     public $schemes = [];
+
+    public $amcs = [];
 
     public $parsedCarbon = [];
 
@@ -61,6 +66,8 @@ class EtfPortfolios extends BasePackage
         $this->investmentsPackage = $this->usepackage(EtfInvestments::class);
 
         $this->schemesPackage = $this->usepackage(EtfSchemes::class);
+
+        $this->amcsPackage = $this->usepackage(EtfAmcs::class);
 
         parent::init();
 
@@ -766,6 +773,7 @@ class EtfPortfolios extends BasePackage
             $this->portfolio['total_value'] = 0;
             $this->portfolio['allocation'] = [];
             $this->portfolio['allocation']['by_schemes'] = [];
+            $this->portfolio['allocation']['by_amcs'] = [];
             $this->portfolio['allocation']['by_categories'] = [];
             $this->portfolio['allocation']['by_subcategories'] = [];
 
@@ -861,6 +869,7 @@ class EtfPortfolios extends BasePackage
                     continue;
                 }
 
+                //By Schemes & Amcs
                 if (isset($this->schemes[$schemeId])) {
                     $scheme = &$this->schemes[$schemeId];
                 } else {
@@ -874,6 +883,7 @@ class EtfPortfolios extends BasePackage
                 }
 
                 $schemeAllocation = &$this->portfolio['allocation']['by_schemes'][$scheme['id']];
+
                 $schemeAllocation['scheme_id'] = $scheme['id'];
                 $schemeAllocation['scheme_name'] = $scheme['name'];
                 $schemeAllocation['invested_amount'] = $investment['total_investment'];
@@ -891,6 +901,38 @@ class EtfPortfolios extends BasePackage
 
                 array_push($schemeAllocation['investments'], $investment['id']);
 
+                if (isset($this->amcs[$scheme['amc_id']])) {
+                    $amc = &$this->amcs[$scheme['amc_id']];
+                } else {
+                    $this->amcs[$scheme['amc_id']] = $this->amcsPackage->getById($scheme['amc_id']);
+
+                    $amc = &$this->amcs[$scheme['amc_id']];
+                }
+
+                if (!isset($this->portfolio['allocation']['by_amcs'][$scheme['amc_id']])) {
+                    $this->portfolio['allocation']['by_amcs'][$scheme['amc_id']] = [];
+                }
+
+                $amcAllocation = &$this->portfolio['allocation']['by_amcs'][$scheme['amc_id']];
+
+                $amcAllocation['amc_id'] = $amc['id'];
+                $amcAllocation['amc_name'] = $amc['name'];
+                $amcAllocation['invested_amount'] = $investment['total_investment'];
+                $amcAllocation['invested_percent'] = round(($investment['total_investment'] / $this->portfolio['invested_amount']) * 100, 2);
+                $amcAllocation['return_amount'] = $investment['latest_value'];
+                if ($investment['latest_value'] == 0) {
+                    $amcAllocation['return_percent'] = 0;
+                } else {
+                    $amcAllocation['return_percent'] = round(($investment['latest_value'] / $this->portfolio['return_amount']) * 100, 2);
+                }
+
+                if (!isset($amcAllocation['investments'])) {
+                    $amcAllocation['investments'] = [];
+                }
+
+                array_push($amcAllocation['investments'], $investment['id']);
+
+                //By Categories & sub-categories
                 $categoryId = $scheme['category_id'];
 
                 if (isset($scheme['category']['parent_id'])) {
