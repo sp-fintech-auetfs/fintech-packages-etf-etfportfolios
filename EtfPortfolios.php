@@ -917,13 +917,21 @@ class EtfPortfolios extends BasePackage
 
                 $amcAllocation['amc_id'] = $amc['id'];
                 $amcAllocation['amc_name'] = $amc['name'];
-                $amcAllocation['invested_amount'] = $investment['total_investment'];
-                $amcAllocation['invested_percent'] = round(($investment['total_investment'] / $this->portfolio['invested_amount']) * 100, 2);
-                $amcAllocation['return_amount'] = $investment['latest_value'];
+                if (isset($amcAllocation['invested_amount'])) {
+                    $amcAllocation['invested_amount'] += $investment['total_investment'];
+                } else {
+                    $amcAllocation['invested_amount'] = $investment['total_investment'];
+                }
+                $amcAllocation['invested_percent'] = round(($amcAllocation['invested_amount'] / $this->portfolio['invested_amount']) * 100, 2);
+                if (isset($amcAllocation['return_amount'])) {
+                    $amcAllocation['return_amount'] += $investment['latest_value'];
+                } else {
+                    $amcAllocation['return_amount'] = $investment['latest_value'];
+                }
                 if ($investment['latest_value'] == 0) {
                     $amcAllocation['return_percent'] = 0;
                 } else {
-                    $amcAllocation['return_percent'] = round(($investment['latest_value'] / $this->portfolio['return_amount']) * 100, 2);
+                    $amcAllocation['return_percent'] = round(($amcAllocation['return_amount'] / $this->portfolio['return_amount']) * 100, 2);
                 }
 
                 if (!isset($amcAllocation['investments'])) {
@@ -1225,5 +1233,32 @@ class EtfPortfolios extends BasePackage
         }
 
         return false;
+    }
+
+    public function calculatePercentDiff($calculateMain, $calculateWith)
+    {
+        $calculateMain = (float) str_replace(',', '', $calculateMain);
+        $calculateWith = (float) str_replace(',', '', $calculateWith);
+
+        if ($calculateMain <= 0 || $calculateWith <= 0) {
+            $this->addResponse('Numbers cannot be less than or equal to 0', 1);
+
+            return false;
+        }
+
+        $total = $calculateMain + $calculateWith;
+
+        $calculateMainPercent = ($calculateMain / $total) * 100;
+        $calculateWithPercent = ($calculateWith / $total) * 100;
+
+        if ($calculateMainPercent >= $calculateWithPercent) {
+            $diff = $calculateMainPercent - $calculateWithPercent;
+        } else {
+            $diff = $calculateWithPercent - $calculateMainPercent;
+        }
+
+        $this->addResponse('Calculated', 0, ['diff' => round($diff, 2) . '%']);
+
+        return $diff;
     }
 }
